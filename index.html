@@ -35,7 +35,7 @@ h1,h2{font-family:var(--display);font-weight:600;line-height:1.15;letter-spacing
 h1{font-size:clamp(32px,6vw,48px)}
 h2{font-size:clamp(24px,4.6vw,34px)}
 h1 em,h2 em{font-style:normal}
-.help{color:var(--muted);margin:14px 0 0;max-width:52ch}
+.help{color:var(--muted);margin:14px 0 0;max-width:52ch;overflow-wrap:anywhere}
 .field{margin-top:28px}
 input[type=text],input[type=email],textarea{width:100%;font:inherit;font-size:20px;color:var(--ink);background:transparent;border:0;border-bottom:2px solid var(--line);padding:10px 2px;border-radius:0;outline:none;transition:border-color .2s}
 textarea{resize:none;min-height:110px;font-size:18px;line-height:1.5}
@@ -228,11 +228,15 @@ function show(n){
   }
 }
 
+let picking=false;
 function pick(q,v){
+  if(picking) return;
+  picking=true;
+  const at=i;
   A[q.id]=v;
   el.querySelectorAll(".choice").forEach(b=>b.setAttribute("aria-checked",b.dataset.v===v));
-  if(q.id==="adult"&&v==="No"){ setTimeout(underage,220); return; }
-  setTimeout(()=>show(i+1),220);
+  if(q.id==="adult"&&v==="No"){ setTimeout(()=>{picking=false;underage()},220); return; }
+  setTimeout(()=>{picking=false;show(at+1)},220);
 }
 
 function submitText(q){
@@ -245,7 +249,7 @@ function submitText(q){
 }
 
 function stop(title,text,backTo){
-  bar.style.width="100%";
+  i=Q.length;bar.style.width="100%";
   el.innerHTML=`<div class="fade"><h2>${title}</h2><p class="help">${text}</p><div class="actions"><button class="btn ghost" id="back" type="button">← Back</button></div></div>`;
   document.getElementById("back").onclick=()=>show(backTo);
 }
@@ -374,6 +378,7 @@ function result(){
 
 document.addEventListener("keydown",e=>{
   if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if((e.key==="Enter"||e.key===" ")&&e.target.tagName==="BUTTON") return;
   const typing=e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA";
   if(!PATH){
     const k=e.key.toUpperCase();
