@@ -268,6 +268,9 @@ function summary(){
   return `<dl class="summary">`+answered().map(q=>`<div><dt>${esc(plain(q.title))}</dt><dd>${esc(A[q.id])}</dd></div>`).join("")+`</dl>`;
 }
 function briefText(){return answered().map(q=>`${plain(q.title)}\n${A[q.id]}`).join("\n\n")}
+function gmailLink(){
+  return "https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(WORK_EMAIL)+"&su="+encodeURIComponent("Project enquiry: "+(A.need||"")+" ("+(A.brand||A.name||"")+")")+"&body="+encodeURIComponent(briefText());
+}
 function mailtoLink(){
   return "mailto:"+WORK_EMAIL+"?subject="+encodeURIComponent("Project enquiry: "+(A.need||"")+" ("+(A.brand||A.name||"")+")")+"&body="+encodeURIComponent(briefText());
 }
@@ -326,15 +329,20 @@ function workResult(ok){
   }else{
     el.innerHTML=`<div class="fade">
       <h2>One last step, ${esc(A.name||"you")}.</h2>
-      <p class="help">Your brief is ready. Tap below to send it from your email, then I'll get back to you.</p>
+      <p class="help">Send me your brief by email and I'll get back to you. Everything you wrote is already filled in.</p>
       <div class="actions">
-        ${WORK_EMAIL?`<a class="btn" href="${esc(mailtoLink())}">Send my brief <span class="arr">→</span></a>`:`<span class="btn" aria-disabled="true" style="opacity:.55">Sending opens soon</span>`}
-        <button class="btn ghost" id="again" type="button">Back to start</button>
+        <a class="btn" href="${esc(gmailLink())}" target="_blank" rel="noopener">Send with Gmail <span class="arr">→</span></a>
+        <a class="btn ghost" href="${esc(mailtoLink())}">Use my email app</a>
+        <button class="btn ghost" id="copy" type="button">Copy my brief</button>
       </div>
+      <p class="hint" id="copied">Or email it to <a href="mailto:${WORK_EMAIL}" style="color:inherit">${WORK_EMAIL}</a>.</p>
+      <div class="actions"><button class="btn ghost" id="again" type="button">Back to start</button></div>
       ${summary()}
     </div>`;
   }
   document.getElementById("again").onclick=home;
+  const c=document.getElementById("copy");
+  if(c) c.onclick=()=>{const t="To: "+WORK_EMAIL+"\n\n"+briefText();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{c.textContent="Copied"}).catch(()=>{c.textContent="Couldn't copy"})};
 }
 
 function result(){
