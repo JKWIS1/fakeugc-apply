@@ -161,7 +161,7 @@ function home(){
   PATH=null;i=-1;bar.style.width="0%";foot.textContent="18+ only.";
   el.innerHTML=`<div class="fade">
     <h1>Get in touch</h1>
-    <p class="help">Choose an option below, or <a href="https://x.com/FakeUGC" target="_blank" rel="noopener" style="color:inherit">message me on X</a>.</p>
+    <p class="help">Choose an option below, <a href="https://x.com/FakeUGC" target="_blank" rel="noopener" style="color:inherit">message me on X</a>, or email <a href="mailto:${WORK_EMAIL}" style="color:inherit">${WORK_EMAIL}</a>.</p>
     <div class="paths choices" role="list">
       <button type="button" class="choice" data-p="mentor"><span class="key">A</span><span><span class="txt"><b>1-on-1 mentorship</b></span></span></button>
       <button type="button" class="choice" data-p="work"><span class="key">B</span><span><span class="txt"><b>Work with me</b></span></span></button>
@@ -277,8 +277,12 @@ function send(){
   if(!WORK_EMAIL) return Promise.resolve(false);
   const data={_subject:"New project enquiry: "+(A.need||"")+" from "+(A.brand||A.name||""),_template:"table",_captcha:"false",_replyto:A.email||""};
   answered().forEach(q=>{data[plain(q.title)]=A[q.id]});
-  return fetch("https://formsubmit.co/ajax/"+encodeURIComponent(WORK_EMAIL),{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(data)})
-    .then(r=>r.ok?r.json().then(j=>String(j.success)==="true").catch(()=>true):false).catch(()=>false);
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),9000);
+  const req=fetch("https://formsubmit.co/ajax/"+encodeURIComponent(WORK_EMAIL),{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(data),signal:ctl.signal})
+    .then(r=>r.ok?r.json().then(j=>String(j.success)==="true").catch(()=>true):false).catch(()=>false)
+    .finally(()=>clearTimeout(timer));
+  return Promise.race([req,new Promise(res=>setTimeout(()=>res(false),9500))]);
 }
 
 let reviewTimer=null;
