@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Apply to work with FakeUGC</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Contact FakeUGC</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +66,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
 .fade > *{animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
 .fade > *:nth-child(2){animation-delay:.06s}.fade > *:nth-child(3){animation-delay:.12s}.fade > *:nth-child(4){animation-delay:.18s}.fade > *:nth-child(5){animation-delay:.24s}.fade > *:nth-child(6){animation-delay:.3s}
 .choices .choice{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
-.choices .choice:nth-child(1){animation-delay:.16s}.choices .choice:nth-child(2){animation-delay:.22s}.choices .choice:nth-child(3){animation-delay:.28s}.choices .choice:nth-child(4){animation-delay:.34s}
+.choices .choice:nth-child(1){animation-delay:.16s}.choices .choice:nth-child(2){animation-delay:.22s}.choices .choice:nth-child(3){animation-delay:.28s}.choices .choice:nth-child(4){animation-delay:.34s}.choices .choice:nth-child(5){animation-delay:.4s}
 .choice{transition:border-color .15s,background .15s,transform .15s}
 .choice:hover{transform:translateY(-2px)}
 .choice[aria-checked="true"]{animation:pop .28s ease}
@@ -97,22 +97,29 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
 @keyframes in{from{opacity:.001;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.fade > *,.choices .choice,.choice[aria-checked="true"],.steps li .dot,.tick circle,.tick path{animation:none!important}.tick circle,.tick path{stroke-dashoffset:0}.progress span{transition:none}.spinner{animation:none}.choice:hover,.btn:hover{transform:none}}
 @media (max-width:480px){.summary div{grid-template-columns:1fr;gap:2px}}
+
+.choice .sub{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.choice .txt{display:block}
+.paths{display:grid;gap:12px;margin-top:28px}
+.paths .choice{padding:18px 18px}
+.paths .choice b{font-weight:600}
 </style>
 
 <div class="progress" aria-hidden="true"><span id="bar"></span></div>
 <div class="wrap">
   <div class="brand"><b>FakeUGC</b></div>
   <main><section class="step" id="step" aria-live="polite"></section></main>
-  <div class="foot">18+ only. No income is promised: results depend on your work.</div>
+  <div class="foot" id="foot">18+ only.</div>
 </div>
 
 <script>
 /* ===== Settings Bruce fills in ===== */
-const CALENDLY_URL = "https://calendly.com/fakeugcaiofm/30min"; // "Mentorship call" event; custom questions a1-a8 match the order below
+const CALENDLY_URL = "https://calendly.com/fakeugcaiofm/30min"; // "Mentorship call" event; custom questions a1-a8 match the mentorship order below
 const LAB_URL = "https://www.skool.com/ai-ofm-ai-ugc-2941/about";
+const WORK_EMAIL = "fakeugcaiofm@gmail.com"; // the FakeUGC inbox that receives "Work with me" enquiries (sent through formsubmit.co; the first one asks you to confirm by email)
 
-/* ===== Questions (Calendly custom questions a1..a8 must be added in this order) ===== */
-const Q = [
+/* ===== Mentorship questions (Calendly custom questions a1..a8 must stay in this order) ===== */
+const MENTOR = [
   {id:"adult", type:"choice", title:"First things first. Are you <em>18 or over?</em>", options:["Yes, I'm 18+","No"]},
   {id:"name", type:"text", title:"What should I call you?", placeholder:"Your first name", required:true, calendly:"name"},
   {id:"handle", type:"text", title:"Where can I find you online?", help:"Your X or Instagram handle.", placeholder:"@yourhandle", required:true, calendly:"a1"},
@@ -126,57 +133,97 @@ const Q = [
   {id:"notes", type:"long", title:"Anything else I should know?", help:"Optional.", placeholder:"Optional", required:false, calendly:"a8"}
 ];
 
-const A = {};
-let i = -1; // -1 = intro
+/* ===== Work with me questions ===== */
+const WORK = [
+  {id:"name", type:"text", title:"What's your name?", placeholder:"Your name", required:true},
+  {id:"email", type:"email", title:"Best email to reach you?", placeholder:"you@company.com", required:true},
+  {id:"brand", type:"text", title:"Your business, brand or handle?", placeholder:"e.g. Glow Labs, glowlabs.com", required:true},
+  {id:"need", type:"choice", title:"What do you need?", options:["UGC ads","AI influencer content","Short-form videos","A custom AI model","Something else"]},
+  {id:"brief", type:"long", title:"Tell me a bit about it.", help:"What it's for and any links.", placeholder:"e.g. 5 short videos for our skincare serum", required:true},
+  {id:"budget", type:"choice", title:"What's the <em>budget?</em>", options:["Under $500","$500 to $1,000","$1,000 to $2,500","$2,500 to $5,000","$5,000+"]}
+];
+
+let PATH = null, Q = [];
+let A = {};
+let i = -1; // -1 = home
 const el = document.getElementById("step");
 const bar = document.getElementById("bar");
+const foot = document.getElementById("foot");
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function setBar(){const total=Q.length;const done=Math.max(0,Math.min(i,total));bar.style.width=(i<0?0:(done/total)*100)+"%"}
+function plain(t){return t.replace(/<[^>]+>/g,"")}
+function visible(){return Q.filter(q=>!q.when||q.when())}
+function setBar(){const v=visible();const k=v.indexOf(Q[i]);bar.style.width=(i<0?0:i>=Q.length?100:(k/v.length)*100)+"%"}
+function nextIdx(n){while(n<Q.length&&Q[n].when&&!Q[n].when()) n++; return n}
+function prevIdx(n){while(n>=0&&Q[n].when&&!Q[n].when()) n--; return n}
+
+function home(){
+  PATH=null;i=-1;bar.style.width="0%";foot.textContent="18+ only.";
+  el.innerHTML=`<div class="fade">
+    <h1>Get in touch</h1>
+    <p class="help">Choose an option below, or <a href="https://x.com/FakeUGC" target="_blank" rel="noopener" style="color:inherit">message me on X</a>.</p>
+    <div class="paths choices" role="list">
+      <button type="button" class="choice" data-p="mentor"><span class="key">A</span><span><span class="txt"><b>1-on-1 mentorship</b></span></span></button>
+      <button type="button" class="choice" data-p="work"><span class="key">B</span><span><span class="txt"><b>Work with me</b></span></span></button>
+    </div>
+  </div>`;
+  const b=[...el.querySelectorAll(".choice")];
+  b.forEach(x=>x.onclick=()=>start(x.dataset.p));
+  b[0].focus();
+}
+
+function start(p){
+  PATH=p;Q=p==="mentor"?MENTOR:WORK;A={};
+  foot.textContent=p==="mentor"?"18+ only. No income is promised: results depend on your work.":"18+ only.";
+  p==="mentor"?intro():show(0);
+}
 
 function intro(){
-  i=-1;setBar();
+  i=-1;bar.style.width="0%";
+  const mentor=PATH==="mentor";
   el.innerHTML=`<div class="fade">
-    <h1>Apply for 1-on-1 mentorship</h1>
-    <p class="help">About 3 minutes. If it's a fit, you'll book a call straight after.</p>
-    <div class="actions"><button class="btn" id="go" type="button">Start</button><span class="hint">press Enter ↵</span></div>
+    <h1>${mentor?"Apply for 1-on-1 mentorship":"Tell me about your project"}</h1>
+    <p class="help">${mentor?"About 3 minutes. If it's a fit, you'll book a call straight after.":"About 3 minutes. I'll read it and get back to you by email."}</p>
+    <div class="actions"><button class="btn" id="go" type="button">Start</button><button class="btn ghost" id="home" type="button">← Back</button><span class="hint">press Enter ↵</span></div>
   </div>`;
   const go=document.getElementById("go");go.onclick=()=>show(0);go.focus();
+  document.getElementById("home").onclick=home;
 }
 
 function show(n){
-  i=n;setBar();
+  n=nextIdx(n);i=n;setBar();
   if(i>=Q.length) return finish();
   const q=Q[i];
+  const v=visible();
   const val=A[q.id]??"";
   let input="";
   if(q.type==="text"||q.type==="email"){
-    input=`<div class="field"><input id="in-${q.id}" type="${q.type==="email"?"email":"text"}" autocomplete="${q.id==="name"?"given-name":q.id==="email"?"email":"off"}" placeholder="${esc(q.placeholder||"")}" value="${esc(val)}" aria-label="${esc(q.title.replace(/<[^>]+>/g,""))}"></div>`;
+    input=`<div class="field"><input id="in-${q.id}" type="${q.type==="email"?"email":"text"}" autocomplete="${q.id==="name"?"name":q.id==="email"?"email":"off"}" placeholder="${esc(q.placeholder||"")}" value="${esc(val)}" aria-label="${esc(plain(q.title))}"></div>`;
   }else if(q.type==="long"){
-    input=`<div class="field"><textarea id="in-${q.id}" placeholder="${esc(q.placeholder||"")}" aria-label="${esc(q.title.replace(/<[^>]+>/g,""))}">${esc(val)}</textarea></div>`;
+    input=`<div class="field"><textarea id="in-${q.id}" placeholder="${esc(q.placeholder||"")}" aria-label="${esc(plain(q.title))}">${esc(val)}</textarea></div>`;
   }else{
-    input=`<div class="choices" role="radiogroup" aria-label="${esc(q.title.replace(/<[^>]+>/g,""))}">`+
+    input=`<div class="choices" role="radiogroup" aria-label="${esc(plain(q.title))}">`+
       q.options.map((o,k)=>`<button type="button" class="choice" role="radio" aria-checked="${val===o}" data-v="${esc(o)}"><span class="key">${String.fromCharCode(65+k)}</span><span>${esc(o)}</span></button>`).join("")+`</div>`;
   }
+  const last=nextIdx(i+1)>=Q.length;
   el.innerHTML=`<div class="fade">
-    <div class="count">${i+1} of ${Q.length}</div>
+    <div class="count">${v.indexOf(q)+1} of ${v.length}</div>
     <h2>${q.title}</h2>
     ${q.help?`<p class="help">${q.help}</p>`:""}
     ${input}
     <div class="error" id="err"></div>
     <div class="actions">
-      ${q.type==="choice"?"":`<button class="btn" id="next" type="button">${i===Q.length-1?"Finish":"OK"}</button><span class="hint">${q.type==="long"?"Shift + Enter for a new line":"press Enter ↵"}</span>`}
+      ${q.type==="choice"?"":`<button class="btn" id="next" type="button">${last?"Finish":"OK"}</button><span class="hint">${q.type==="long"?"Shift + Enter for a new line":"press Enter ↵"}</span>`}
       <button class="btn ghost" id="back" type="button">← Back</button>
     </div>
   </div>`;
-  document.getElementById("back").onclick=()=> i===0?intro():show(i-1);
+  document.getElementById("back").onclick=()=>{const p=prevIdx(i-1); p<0?(PATH==="mentor"?intro():home()):show(p)};
   if(q.type==="choice"){
     const btns=[...el.querySelectorAll(".choice")];
     btns.forEach(b=>b.onclick=()=>pick(q,b.dataset.v));
     (btns.find(b=>b.getAttribute("aria-checked")==="true")||btns[0]).focus();
   }else{
-    const f=document.getElementById("in-"+q.id);
-    f.focus();
+    document.getElementById("in-"+q.id).focus();
     document.getElementById("next").onclick=()=>submitText(q);
   }
 }
@@ -197,12 +244,14 @@ function submitText(q){
   A[q.id]=v; show(i+1);
 }
 
-function underage(){
-  i=Q.length;setBar();
-  el.innerHTML=`<div class="fade"><h2>Thanks for being honest.</h2><p class="help">This mentorship is for adults only, so I can't take you on. Come back when you're 18.</p><div class="actions"><button class="btn ghost" id="back" type="button">← Back</button></div></div>`;
-  document.getElementById("back").onclick=()=>show(0);
+function stop(title,text,backTo){
+  bar.style.width="100%";
+  el.innerHTML=`<div class="fade"><h2>${title}</h2><p class="help">${text}</p><div class="actions"><button class="btn ghost" id="back" type="button">← Back</button></div></div>`;
+  document.getElementById("back").onclick=()=>show(backTo);
 }
+function underage(){ stop("Thanks for being honest.", PATH==="mentor"?"This mentorship is for adults only, so I can't take you on. Come back when you're 18.":"I only work with adults, so I can't take this on. Come back when you're 18.", 0); }
 
+function workFit(){ return A.budget!=="Under $500"; }
 function isFit(){
   return A.adult!=="No" && A.hours!=="Under 5" && A.invest!=="Under $500" && A.start!=="Not sure yet";
 }
@@ -214,26 +263,74 @@ function calendlyLink(){
   return CALENDLY_URL+(CALENDLY_URL.includes("?")?"&":"?")+p.toString();
 }
 
+function answered(){return visible().filter(q=>q.id!=="adult"&&A[q.id])}
 function summary(){
-  return `<dl class="summary">`+Q.filter(q=>q.id!=="adult"&&A[q.id]).map(q=>`<div><dt>${esc(q.title.replace(/<[^>]+>/g,""))}</dt><dd>${esc(A[q.id])}</dd></div>`).join("")+`</dl>`;
+  return `<dl class="summary">`+answered().map(q=>`<div><dt>${esc(plain(q.title))}</dt><dd>${esc(A[q.id])}</dd></div>`).join("")+`</dl>`;
+}
+function briefText(){return answered().map(q=>`${plain(q.title)}\n${A[q.id]}`).join("\n\n")}
+function mailtoLink(){
+  return "mailto:"+WORK_EMAIL+"?subject="+encodeURIComponent("Project enquiry: "+(A.need||"")+" ("+(A.brand||A.name||"")+")")+"&body="+encodeURIComponent(briefText());
+}
+
+let sent=null;
+function send(){
+  if(!WORK_EMAIL) return Promise.resolve(false);
+  const data={_subject:"New project enquiry: "+(A.need||"")+" from "+(A.brand||A.name||""),_template:"table",_captcha:"false",_replyto:A.email||""};
+  answered().forEach(q=>{data[plain(q.title)]=A[q.id]});
+  return fetch("https://formsubmit.co/ajax/"+encodeURIComponent(WORK_EMAIL),{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(data)})
+    .then(r=>r.ok?r.json().then(j=>String(j.success)==="true").catch(()=>true):false).catch(()=>false);
 }
 
 let reviewTimer=null;
 function finish(){
-  i=Q.length;setBar();
-  const steps=["Reviewing your answers","Looking at where you're at","Working out the right next step"];
+  i=Q.length;bar.style.width="100%";
+  const mentor=PATH==="mentor";
+  if(!mentor&&workFit()) sent=send();
+  const steps=mentor?["Reviewing your answers","Looking at where you're at","Working out the right next step"]:["Reading your brief","Sending it over"];
   el.innerHTML=`<div class="fade review" role="status">
     <h2>Hang tight, ${esc(A.name||"")}</h2>
     <ul class="steps">${steps.map((t,k)=>`<li id="st${k}"${k===0?' class="active"':""}><span class="dot" aria-hidden="true"></span>${t}</li>`).join("")}</ul>
     <div class="rvbar" aria-hidden="true"><span id="rvfill"></span></div>
   </div>`;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{const f=document.getElementById("rvfill");if(f)f.style.width="100%"}));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{const f=document.getElementById("rvfill");if(f){if(!mentor)f.style.transitionDuration="3s";f.style.width="100%"}}));
   let s=0;clearInterval(reviewTimer);
   reviewTimer=setInterval(()=>{
     const cur=document.getElementById("st"+s); if(cur){cur.classList.remove("active");cur.classList.add("done")}
     s++; const nx=document.getElementById("st"+s); if(nx) nx.classList.add("active");
-  },2000);
-  setTimeout(()=>{clearInterval(reviewTimer);result()},6400);
+  },mentor?2000:1600);
+  setTimeout(()=>{clearInterval(reviewTimer); mentor?result():workFit()?(sent||Promise.resolve(false)).then(workResult):lowBudget()},mentor?6400:3400);
+}
+
+function lowBudget(){
+  el.innerHTML=`<div class="fade">
+    <h2>Thanks, ${esc(A.name||"you")}.</h2>
+    <p class="help">My projects start above $500, so I'm not the right fit at this budget. If it grows, come back and tell me about it.</p>
+    <div class="actions"><button class="btn ghost" id="again" type="button">Change my answers</button></div>
+  </div>`;
+  document.getElementById("again").onclick=()=>show(Q.findIndex(q=>q.id==="budget"));
+}
+
+function workResult(ok){
+  if(ok){
+    el.innerHTML=`<div class="fade">
+      <svg class="tick" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M16 27l7 7 13-14"/></svg>
+      <h2>Got it, ${esc(A.name||"you")}. <em>I'll be in touch.</em></h2>
+      <p class="help">You'll hear back at ${esc(A.email||"your email")}.</p>
+      <div class="actions"><button class="btn ghost" id="again" type="button">Back to start</button></div>
+      ${summary()}
+    </div>`;
+  }else{
+    el.innerHTML=`<div class="fade">
+      <h2>One last step, ${esc(A.name||"you")}.</h2>
+      <p class="help">Your brief is ready. Tap below to send it from your email, then I'll get back to you.</p>
+      <div class="actions">
+        ${WORK_EMAIL?`<a class="btn" href="${esc(mailtoLink())}">Send my brief <span class="arr">→</span></a>`:`<span class="btn" aria-disabled="true" style="opacity:.55">Sending opens soon</span>`}
+        <button class="btn ghost" id="again" type="button">Back to start</button>
+      </div>
+      ${summary()}
+    </div>`;
+  }
+  document.getElementById("again").onclick=home;
 }
 
 function result(){
@@ -264,19 +361,26 @@ function result(){
 }
 
 document.addEventListener("keydown",e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const typing=e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA";
+  if(!PATH){
+    const k=e.key.toUpperCase();
+    if(!typing&&(k==="A"||k==="B")){e.preventDefault();start(k==="A"?"mentor":"work")}
+    return;
+  }
   if(i<0&&e.key==="Enter"){e.preventDefault();show(0);return}
   if(i<0||i>=Q.length) return;
   const q=Q[i];
   if(q.type==="choice"){
     const k=e.key.toUpperCase();
     const idx=k.length===1?k.charCodeAt(0)-65:-1;
-    if(idx>=0&&idx<q.options.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")){e.preventDefault();pick(q,q.options[idx]);return}
-    if(e.key==="Enter"&&A[q.id]){e.preventDefault();show(i+1)}
+    if(idx>=0&&idx<q.options.length&&!typing){e.preventDefault();pick(q,q.options[idx]);return}
+    if(e.key==="Enter"&&A[q.id]&&e.target.classList&&!e.target.classList.contains("choice")){e.preventDefault();show(i+1)}
   }else if(e.key==="Enter"&&!(q.type==="long"&&e.shiftKey)){
     e.preventDefault();submitText(q);
   }
 });
 
-intro();
+home();
 </script>
 </body></html>
